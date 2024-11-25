@@ -31,7 +31,7 @@ class CrossEncoder(nn.Module):
         self.hf_model.gradient_checkpointing_enable(**kwargs)
 
     def forward(self, batch):
-        ranker_out = self.hf_model(**batch, return_dict=True)
+        ranker_out:  SequenceClassifierOutput = self.hf_model(**batch, return_dict=True)
         logits = ranker_out.logits
 
         if self.training:
@@ -41,21 +41,19 @@ class CrossEncoder(nn.Module):
             )
             loss = self.cross_entropy(scores, self.target_label)
 
-            # Exclude 'past_key_values' and other irrelevant fields
-            ranker_out_dict = ranker_out.to_dict()
-            ranker_out_dict.pop("past_key_values", None)
-
+            # Manually construct SequenceClassifierOutput
             return SequenceClassifierOutput(
                 loss=loss,
-                **ranker_out_dict
+                logits=ranker_out.logits,
+                hidden_states=ranker_out.hidden_states if hasattr(ranker_out, 'hidden_states') else None,
+                attentions=ranker_out.attentions if hasattr(ranker_out, 'attentions') else None
             )
         else:
-            # Exclude 'past_key_values' in the non-training case
-            ranker_out_dict = ranker_out.to_dict()
-            ranker_out_dict.pop("past_key_values", None)
-
+            # Return SequenceClassifierOutput during evaluation/inference
             return SequenceClassifierOutput(
-                **ranker_out_dict
+                logits=ranker_out.logits,
+                hidden_states=ranker_out.hidden_states if hasattr(ranker_out, 'hidden_states') else None,
+                attentions=ranker_out.attentions if hasattr(ranker_out, 'attentions') else None
             )
 
     @classmethod
