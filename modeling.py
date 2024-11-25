@@ -31,7 +31,7 @@ class CrossEncoder(nn.Module):
         self.hf_model.gradient_checkpointing_enable(**kwargs)
 
     def forward(self, batch):
-        ranker_out: SequenceClassifierOutput = self.hf_model(**batch, return_dict=True)
+        ranker_out = self.hf_model(**batch, return_dict=True)
         logits = ranker_out.logits
 
         if self.training:
@@ -41,12 +41,22 @@ class CrossEncoder(nn.Module):
             )
             loss = self.cross_entropy(scores, self.target_label)
 
+            # Exclude 'past_key_values' and other irrelevant fields
+            ranker_out_dict = ranker_out.to_dict()
+            ranker_out_dict.pop("past_key_values", None)
+
             return SequenceClassifierOutput(
                 loss=loss,
-                **ranker_out,
+                **ranker_out_dict
             )
         else:
-            return ranker_out
+            # Exclude 'past_key_values' in the non-training case
+            ranker_out_dict = ranker_out.to_dict()
+            ranker_out_dict.pop("past_key_values", None)
+
+            return SequenceClassifierOutput(
+                **ranker_out_dict
+            )
 
     @classmethod
     def from_pretrained(
