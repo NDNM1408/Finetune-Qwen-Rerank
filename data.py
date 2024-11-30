@@ -34,13 +34,9 @@ class TrainDatasetForCE(Dataset):
         self.total_len = len(self.dataset)
 
     def create_one_example(self, qry_encoding: str, doc_encoding: str):
-        instruction = """Hãy so sánh xem câu truy vấn và văn bản sau có liên quan đến nhau hay không:
-        ### Câu truy vấn: {query}
-        ### Văn bản: {passage} 
-        """
-        prompt = instruction.format(query=qry_encoding, passage=doc_encoding)
-        item = self.tokenizer(
-            prompt,
+        item = self.tokenizer.encode_plus(
+            qry_encoding,
+            doc_encoding,
             truncation=True,
             max_length=self.args.max_len,
             padding=False,
